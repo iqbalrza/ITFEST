@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Nutrition Scanner - Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 15px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f9f9ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            margin: 20px 0;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .result {
+            display: none;
+            margin-top: 30px;
+            padding: 25px;
+            background: #f9f9f9;
+            border-radius: 15px;
+        }
+        
+        .result h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .nutrition-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .nutrition-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .nutrition-item strong {
+            display: block;
+            color: #667eea;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        
+        .nutrition-item span {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍽️ Food Nutrition Scanner</h1>
+        <p class="subtitle">Scan barcode atau foto makanan untuk mendapatkan informasi nutrisi</p>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('barcode')">
+                📷 Scan Barcode
+            </button>
+            <button class="tab" onclick="switchTab('food')">
+                🍕 Analisis Foto Makanan
+            </button>
+        </div>
+        
+        <!-- Barcode Scanner Tab -->
+        <div id="barcode-tab" class="tab-content active">
+            <div class="upload-area" onclick="document.getElementById('barcode-file').click()">
+                <p>📱 Klik atau drag & drop foto barcode di sini</p>
+                <small>Format: JPG, JPEG, PNG (Max 16MB)</small>
+            </div>
+            <input type="file" id="barcode-file" accept="image/*" onchange="handleFileSelect('barcode')">
+            <img id="barcode-preview" class="preview-image" alt="Preview">
+            
+            <button id="barcode-btn" onclick="scanBarcode()" disabled>
+                Scan Barcode
+            </button>
+            
+            <div class="loading" id="barcode-loading">
+                <div class="spinner"></div>
+                <p>Scanning barcode...</p>
+            </div>
+            
+            <div class="error" id="barcode-error"></div>
+            <div class="result" id="barcode-result"></div>
+        </div>
+        
+        <!-- Food Analysis Tab -->
+        <div id="food-tab" class="tab-content">
+            <div class="upload-area" onclick="document.getElementById('food-file').click()">
+                <p>📸 Klik atau drag & drop foto makanan di sini</p>
+                <small>Format: JPG, JPEG, PNG (Max 16MB)</small>
+            </div>
+            <input type="file" id="food-file" accept="image/*" onchange="handleFileSelect('food')">
+            <img id="food-preview" class="preview-image" alt="Preview">
+            
+            <textarea id="food-description" placeholder="Deskripsi tambahan (opsional)&#10;Contoh: Nasi goreng dengan telur dan ayam, porsi sedang"></textarea>
+            
+            <button id="food-btn" onclick="analyzeFood()" disabled>
+                Analisis Nutrisi
+            </button>
+            
+            <div class="loading" id="food-loading">
+                <div class="spinner"></div>
+                <p>Menganalisis foto dengan AI...</p>
+            </div>
+            
+            <div class="error" id="food-error"></div>
+            <div class="result" id="food-result"></div>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let currentFiles = { barcode: null, food: null };
+        
+        function switchTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`${tab}-tab`).classList.add('active');
+        }
+        
+        function handleFileSelect(type) {
+            const file = document.getElementById(`${type}-file`).files[0];
+            if (!file) return;
+            
+            currentFiles[type] = file;
+            
+            // Preview image
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById(`${type}-preview`);
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+            
+            // Enable button
+            document.getElementById(`${type}-btn`).disabled = false;
+        }
+        
+        async function scanBarcode() {
+            const file = currentFiles.barcode;
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            showLoading('barcode', true);
+            hideError('barcode');
+            hideResult('barcode');
+            
+            try {
+                const response = await fetch(`${API_URL}/api/scan-barcode`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayBarcodeResult(data);
+                } else {
+                    showError('barcode', data.error || 'Gagal scan barcode');
+                }
+            } catch (error) {
+                showError('barcode', 'Error: ' + error.message);
+            } finally {
+                showLoading('barcode', false);
+            }
+        }
+        
+        async function analyzeFood() {
+            const file = currentFiles.food;
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            const description = document.getElementById('food-description').value;
+            if (description) {
+                formData.append('description', description);
+            }
+            
+            showLoading('food', true);
+            hideError('food');
+            hideResult('food');
+            
+            try {
+                const response = await fetch(`${API_URL}/api/analyze-food`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayFoodResult(data);
+                } else {
+                    showError('food', data.error || 'Gagal menganalisis makanan');
+                }
+            } catch (error) {
+                showError('food', 'Error: ' + error.message);
+            } finally {
+                showLoading('food', false);
+            }
+        }
+        
+        function displayBarcodeResult(data) {
+            const nutrition = data.nutrition;
+            let html = `
+                <h3>${nutrition.product_name || 'Produk'}</h3>
+                <p><strong>Brand:</strong> ${nutrition.brands || 'N/A'}</p>
+                <p><strong>Barcode:</strong> ${data.barcode}</p>
+                <p><strong>Quantity:</strong> ${nutrition.quantity || 'N/A'}</p>
+                
+                <h4 style="margin-top: 20px;">Informasi Nutrisi (per 100g)</h4>
+                <div class="nutrition-grid">
+            `;
+            
+            const facts = nutrition.nutrition_facts || {};
+            for (const [key, value] of Object.entries(facts)) {
+                if (value !== 'N/A') {
+                    const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    html += `
+                        <div class="nutrition-item">
+                            <strong>${value.split(' ')[0]}</strong>
+                            <span>${label}</span>
+                        </div>
+                    `;
+                }
+            }
+            
+            html += `</div>`;
+            
+            if (nutrition.nutriscore_grade && nutrition.nutriscore_grade !== 'N/A') {
+                html += `<p style="margin-top: 15px;"><strong>Nutri-Score:</strong> ${nutrition.nutriscore_grade.toUpperCase()}</p>`;
+            }
+            
+            document.getElementById('barcode-result').innerHTML = html;
+            document.getElementById('barcode-result').style.display = 'block';
+        }
+        
+        function displayFoodResult(data) {
+            const analysis = data.analysis;
+            let html = `<h3>🍽️ ${analysis.dish_name || 'Makanan'}</h3>`;
+            
+            // Daftar komponen
+            if (analysis.components && analysis.components.length > 0) {
+                html += `
+                    <div style="margin: 20px 0;">
+                        <p><strong>Gambar yang kamu kirim memperlihatkan:</strong></p>
+                        <ul style="list-style: none; padding-left: 0;">
+                `;
+                analysis.components.forEach(comp => {
+                    html += `<li style="padding: 5px 0;">• ${comp}</li>`;
+                });
+                html += `</ul></div>`;
+            }
+            
+            // Tabel nutrisi per komponen
+            if (analysis.nutrition_table && analysis.nutrition_table.length > 0) {
+                html += `
+                    <div style="margin: 20px 0;">
+                        <p><strong>Berikut perkiraan kandungan gizi per porsi (±1 piring):</strong></p>
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                            <thead>
+                                <tr style="background: #f0f0f0;">
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Komponen</th>
+                                    <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Takaran</th>
+                                    <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Kalori<br>(kkal)</th>
+                                    <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Protein<br>(g)</th>
+                                    <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Lemak<br>(g)</th>
+                                    <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Karbohidrat<br>(g)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                analysis.nutrition_table.forEach((item, index) => {
+                    const bgColor = index % 2 === 0 ? '#fff' : '#f9f9f9';
+                    html += `
+                        <tr style="background: ${bgColor};">
+                            <td style="padding: 10px; border: 1px solid #ddd;">${item.component}</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">${item.portion}</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">${item.calories}</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">${item.protein}</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">${item.fat}</td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">${item.carbohydrates}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            
+            // Total nutrisi
+            if (analysis.total_nutrition) {
+                html += `
+                    <div style="margin: 20px 0; padding: 15px; background: #f0f8ff; border-radius: 10px;">
+                        <p><strong>📊 Total Kandungan Nutrisi:</strong></p>
+                        <div class="nutrition-grid" style="margin-top: 10px;">
+                            <div class="nutrition-item">
+                                <strong>${analysis.total_nutrition.total_calories}</strong>
+                                <span>Total Kalori (kkal)</span>
+                            </div>
+                            <div class="nutrition-item">
+                                <strong>${analysis.total_nutrition.total_protein}</strong>
+                                <span>Total Protein (g)</span>
+                            </div>
+                            <div class="nutrition-item">
+                                <strong>${analysis.total_nutrition.total_fat}</strong>
+                                <span>Total Lemak (g)</span>
+                            </div>
+                            <div class="nutrition-item">
+                                <strong>${analysis.total_nutrition.total_carbohydrates}</strong>
+                                <span>Total Karbohidrat (g)</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Catatan tambahan
+            if (analysis.notes && analysis.notes.length > 0) {
+                html += `
+                    <div style="margin: 20px 0;">
+                        <p><strong>📝 Catatan:</strong></p>
+                        <ul>
+                `;
+                analysis.notes.forEach(note => {
+                    html += `<li>${note}</li>`;
+                });
+                html += `</ul></div>`;
+            }
+            
+            // Fallback jika format lama
+            if (!analysis.nutrition_table && analysis.nutrition_per_portion) {
+                html += `
+                    <p><strong>Porsi:</strong> ${analysis.estimated_portion || 'N/A'}</p>
+                    <h4 style="margin-top: 20px;">Nutrisi per Porsi</h4>
+                    <div class="nutrition-grid">
+                `;
+                
+                const nutrition = analysis.nutrition_per_portion || {};
+                for (const [key, value] of Object.entries(nutrition)) {
+                    const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    html += `
+                        <div class="nutrition-item">
+                            <strong>${value.split(' ')[0]}</strong>
+                            <span>${label}</span>
+                        </div>
+                    `;
+                }
+                
+                html += `</div>`;
+            }
+            
+            document.getElementById('food-result').innerHTML = html;
+            document.getElementById('food-result').style.display = 'block';
+        }
+        
+        function showLoading(type, show) {
+            document.getElementById(`${type}-loading`).style.display = show ? 'block' : 'none';
+            document.getElementById(`${type}-btn`).disabled = show;
+        }
+        
+        function showError(type, message) {
+            const errorEl = document.getElementById(`${type}-error`);
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+        
+        function hideError(type) {
+            document.getElementById(`${type}-error`).style.display = 'none';
+        }
+        
+        function hideResult(type) {
+            document.getElementById(`${type}-result`).style.display = 'none';
+        }
+        
+        // Drag and drop support
+        ['barcode', 'food'].forEach(type => {
+            const uploadArea = document.querySelectorAll('.upload-area')[type === 'barcode' ? 0 : 1];
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    document.getElementById(`${type}-file`).files = e.dataTransfer.files;
+                    handleFileSelect(type);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
